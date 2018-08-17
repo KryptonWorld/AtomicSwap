@@ -1,4 +1,4 @@
-pragma solidity ^0.4.15;
+pragma solidity ^0.4.22;
 
 /* This contract is based on https://github.com/AltCoinExchange/ethatomicswap/blob/master/contracts/AtomicSwap.sol
    
@@ -124,6 +124,7 @@ contract AtomicSwap {
 		Initiate the swapper with the native token.
 	*/
 	function initiate (uint _refundTime,bytes20 _hashedSecret,address _participant) 
+		public
 	    payable 
 	    isNotInitiated(_hashedSecret)   
 	{
@@ -152,6 +153,7 @@ contract AtomicSwap {
 							address _participant, 
 							address _tokenAddress, 
 							uint256 _value) 
+		public
 	    isNotInitiated(_hashedSecret)    
 	{
 		__initiate(_refundTime, _hashedSecret, _participant);
@@ -182,6 +184,7 @@ contract AtomicSwap {
 							address _participant, 
 							address _tokenAddress, 
 							uint256 _tokenId) 
+		public
 	    isNotInitiated(_hashedSecret)    
 	{
 		__initiate(_refundTime, _hashedSecret, _participant);
@@ -206,6 +209,7 @@ contract AtomicSwap {
 
 
 	function redeem(bytes32 _secret, bytes20 _hashedSecret) 
+		public
 	    isRedeemable(_hashedSecret, _secret)
 	{
 
@@ -228,6 +232,7 @@ contract AtomicSwap {
 	}
 
 	function refund(bytes20 _hashedSecret)
+		public
 	    isRefundable(_hashedSecret) 
 	{
 
