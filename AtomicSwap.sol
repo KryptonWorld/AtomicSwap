@@ -9,6 +9,33 @@ pragma solidity ^0.4.15;
 
 */
 
+contract ERC20 {
+    function totalSupply() public constant returns (uint);
+    function balanceOf(address tokenOwner) public constant returns (uint balance);
+    function allowance(address tokenOwner, address spender) public constant returns (uint remaining);
+    function transfer(address to, uint tokens) public returns (bool success);
+    function approve(address spender, uint tokens) public returns (bool success);
+    function transferFrom(address from, address to, uint tokens) public returns (bool success);
+    event Transfer(address indexed from, address indexed to, uint tokens);
+    event Approval(address indexed tokenOwner, address indexed spender, uint tokens);
+}
+
+
+contract ERC721{
+	event Transfer(address indexed _from, address indexed _to, uint256 indexed _tokenId);
+	event Approval(address indexed _owner, address indexed _approved, uint256 indexed _tokenId);
+	event ApprovalForAll(address indexed _owner, address indexed _operator, bool _approved);
+	function balanceOf(address _owner) external view returns (uint256);
+	function ownerOf(uint256 _tokenId) external view returns (address);
+	function safeTransferFrom(address _from, address _to, uint256 _tokenId, bytes data) external payable;
+	function safeTransferFrom(address _from, address _to, uint256 _tokenId) external payable;
+	function transferFrom(address _from, address _to, uint256 _tokenId) external payable;
+	function approve(address _approved, uint256 _tokenId) external payable;
+	function setApprovalForAll(address _operator, bool _approved) external;
+	function getApproved(uint256 _tokenId) external view returns (address);
+	function isApprovedForAll(address _owner, address _operator) external view returns (bool);
+}
+
 contract AtomicSwap {
 
 	/*The state of the swap instance*/
@@ -27,8 +54,9 @@ contract AtomicSwap {
         address initiator;
         address participant;
 
+		address tokenAddress;
+
         uint256 value;
-		uint256 indexed erc721TokenId;
 
         bool emptied;
 
@@ -47,8 +75,12 @@ contract AtomicSwap {
     	bytes20 _hashedSecret,
     	address _participant,
     	address _initiator,
+
+		AssetType _assetType,
+
 		uint256 _funds,
-		uint256 indexed erc721TokenId; 
+
+		address _tokenAddress
 	);
 
 	constructor() public {}
@@ -93,21 +125,22 @@ contract AtomicSwap {
 	*/
 	function initiate (uint _refundTime,bytes20 _hashedSecret,address _participant) 
 	    payable 
-	    isNotInitiated(_hashedSecret)    
+	    isNotInitiated(_hashedSecret)   
 	{
 		__initiate(_refundTime, _hashedSecret, _participant);
 
         swaps[_hashedSecret].value = msg.value;
 		swaps[_hashedSecret].assetType = AssetType.Native;
 
-		Initiated(
+		emit Initiated(
 			swaps[_hashedSecret].initTimestamp,
     		_refundTime,
     		_hashedSecret,
     		_participant,
     		msg.sender,
+			AssetType.Native,
 		 	msg.value,
-			0
+			address(0)
 		);
 	}
 
@@ -123,47 +156,51 @@ contract AtomicSwap {
 	{
 		__initiate(_refundTime, _hashedSecret, _participant);
 
-		//TODO
+		require(ERC20(_tokenAddress).transferFrom(msg.sender, this, _value) == true);
 
         swaps[_hashedSecret].value = _value;
 		swaps[_hashedSecret].assetType = AssetType.ERC20Value;
+		swaps[_hashedSecret].tokenAddress = _tokenAddress;
 
-		Initiated(
+		emit Initiated(
 			swaps[_hashedSecret].initTimestamp,
     		_refundTime,
     		_hashedSecret,
     		_participant,
     		msg.sender,
-		 	msg.value,
-			0
+			AssetType.ERC20Value,
+		 	_value,
+			_tokenAddress
 		);
 	}
 
 	/**
 		Initiate the swapper with the ERC721Value token.
 	*/
-	function initiateERC20 (uint _refundTime, 
+	function initiateERC721 (uint _refundTime, 
 							bytes20 _hashedSecret, 
 							address _participant, 
 							address _tokenAddress, 
-							uint256 indexed tokenId) 
+							uint256 _tokenId) 
 	    isNotInitiated(_hashedSecret)    
 	{
 		__initiate(_refundTime, _hashedSecret, _participant);
 
-		//TODO
+		ERC721(_tokenAddress).transferFrom(msg.sender, this, _tokenId);
 
-        swaps[_hashedSecret].erc721TokenId = tokenId;
-		swaps[_hashedSecret].assetType = AssetType.ERC20Value;
+        swaps[_hashedSecret].value = _tokenId;
+		swaps[_hashedSecret].assetType = AssetType.ERC721Value;
+		swaps[_hashedSecret].tokenAddress = _tokenAddress;
 
-		Initiated(
+		emit Initiated(
 			swaps[_hashedSecret].initTimestamp,
     		_refundTime,
     		_hashedSecret,
     		_participant,
     		msg.sender,
-		 	msg.value,
-			0
+			AssetType.ERC721Value,
+		 	_tokenId,
+			_tokenAddress
 		);
 	}
 
@@ -177,16 +214,16 @@ contract AtomicSwap {
             	swaps[_hashedSecret].participant.transfer(swaps[_hashedSecret].value);
 			}
 			if(swaps[_hashedSecret].assetType == AssetType.ERC20Value){
-            	//TODO
+            	ERC20(swaps[_hashedSecret].tokenAddress).transferFrom(this, swaps[_hashedSecret].participant, swaps[_hashedSecret].value);
 			}
 
 			if(swaps[_hashedSecret].assetType == AssetType.ERC721Value){
-            	//TODO
+            	ERC721(swaps[_hashedSecret].tokenAddress).transferFrom(this, swaps[_hashedSecret].participant, swaps[_hashedSecret].value);
 			}				
 
         }
         swaps[_hashedSecret].emptied = true;
-        Redeemed(block.timestamp);
+        emit Redeemed(block.timestamp);
         swaps[_hashedSecret].secret = _secret;
 	}
 
@@ -200,14 +237,14 @@ contract AtomicSwap {
 			}
 
 			if(swaps[_hashedSecret].assetType == AssetType.ERC20Value){
-            	//TODO
+            	ERC20(swaps[_hashedSecret].tokenAddress).transferFrom(this, swaps[_hashedSecret].initiator, swaps[_hashedSecret].value);
 			}
 
 			if(swaps[_hashedSecret].assetType == AssetType.ERC721Value){
-            	//TODO
+            	ERC721(swaps[_hashedSecret].tokenAddress).transferFrom(this, swaps[_hashedSecret].initiator, swaps[_hashedSecret].value);
 			}
         }
         swaps[_hashedSecret].emptied = true;
-	    Refunded(block.timestamp);
+	    emit Refunded(block.timestamp);
 	}
 }
