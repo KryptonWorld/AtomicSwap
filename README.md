@@ -1,4 +1,4 @@
-# The Atomic Swap Protocol for Coins on Two ETH-based chains
+# The Atomic Swap Protocol for Native Coins on Two ETH-based chains
 
 Suppose Alice want to use X ETH to exchange Y KETH from Bob. They mutually agree on this rate. Suppose we have the contracts running on ETH chain and the KETH chain with names '''ETHcontract''' and '''KETHcontract''', respectively.
 
@@ -52,10 +52,13 @@ If any of the conditions fail to satisfy, then either Alice or Bob fail to coope
 # The Atomic Swap Protocol for ERC20 and ERC721 Token
 
 The process of swapping ERC20 and ERC721 token are similar to swap native tokens. To initiate the swap, the initiator just need to first call the token contract to approve the swap contract the corresponding amount of tokens.
+
 '''
 ERC20/721Token.approve(ETHContract.address, value)
 '''
+
 Then the swap initiator/participator use the initiateERC20/initiateERC721 function to start the swap contract.
+
 '''
 initiateERC20/initiateERC721(uint _refundTime, 
                             bytes20 _hashedSecret, 
@@ -64,3 +67,5 @@ initiateERC20/initiateERC721(uint _refundTime,
                             uint256 _value          // the amount of value or tokenId to be swapped
                             )
 '''
+
+The rest of the protocol is the same as the native coins.
