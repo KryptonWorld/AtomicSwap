@@ -36,7 +36,23 @@ contract ERC721{
     function isApprovedForAll(address _owner, address _operator) external view returns (bool);
 }
 
-contract AtomicSwap {
+interface ERC721TokenReceiver {
+    /// @notice Handle the receipt of an NFT
+    /// @dev The ERC721 smart contract calls this function on the
+    /// recipient after a `transfer`. This function MAY throw to revert and reject the transfer. Return
+    /// of other than the magic value MUST result in the transaction being reverted.
+    /// @notice The contract address is always the message sender. 
+    /// @param _operator The address which called `safeTransferFrom` function
+    /// @param _from The address which previously owned the token
+    /// @param _tokenId The NFT identifier which is being transferred
+    /// @param _data Additional data with no specified format
+    /// @return `bytes4(keccak256("onERC721Received(address,address,uint256,bytes)"))`
+    /// unless throwing
+    function onERC721Received(address _operator, address _from, uint256 _tokenId, bytes _data) external returns(bytes4);
+}
+    
+
+contract AtomicSwap is ERC721TokenReceiver{
 
     /*The state of the swap instance*/
     enum State { Empty, Initiator}
@@ -189,7 +205,7 @@ contract AtomicSwap {
     {
         __initiate(_refundTime, _hashedSecret, _participant);
 
-        ERC721(_tokenAddress).transferFrom(msg.sender, this, _tokenId);
+        ERC721(_tokenAddress).safeTransferFrom(msg.sender, this, _tokenId);
 
         swaps[_hashedSecret].value = _tokenId;
         swaps[_hashedSecret].assetType = AssetType.ERC721Value;
@@ -223,7 +239,7 @@ contract AtomicSwap {
             }
 
             if(swaps[_hashedSecret].assetType == AssetType.ERC721Value){
-                ERC721(swaps[_hashedSecret].tokenAddress).transferFrom(this, swaps[_hashedSecret].participant, swaps[_hashedSecret].value);
+                ERC721(swaps[_hashedSecret].tokenAddress).safeTransferFrom(this, swaps[_hashedSecret].participant, swaps[_hashedSecret].value);
             }                
 
         }
@@ -248,10 +264,15 @@ contract AtomicSwap {
             }
 
             if(swaps[_hashedSecret].assetType == AssetType.ERC721Value){
-                ERC721(swaps[_hashedSecret].tokenAddress).transferFrom(this, swaps[_hashedSecret].initiator, swaps[_hashedSecret].value);
+                ERC721(swaps[_hashedSecret].tokenAddress).safeTransferFrom(this, swaps[_hashedSecret].initiator, swaps[_hashedSecret].value);
             }
         }
         swaps[_hashedSecret].emptied = true;
         emit Refunded(block.timestamp);
+    }
+
+
+    function onERC721Received(address _operator, address _from, uint256 _tokenId, bytes _data) external returns(bytes4){
+        return bytes4(keccak256("onERC721Received(address,address,uint256,bytes)"));
     }
 }
