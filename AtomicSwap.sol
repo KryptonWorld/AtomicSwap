@@ -83,7 +83,7 @@ contract AtomicSwap {
         address _tokenAddress
     );
 
-    constructor() public {}
+    constructor() public{}
     
     modifier isRefundable(bytes20 _hashedSecret) {
         require(block.timestamp > swaps[_hashedSecret].initTimestamp + swaps[_hashedSecret].refundTime);
@@ -217,8 +217,9 @@ contract AtomicSwap {
             if(swaps[_hashedSecret].assetType == AssetType.Native){
                 swaps[_hashedSecret].participant.transfer(swaps[_hashedSecret].value);
             }
+            
             if(swaps[_hashedSecret].assetType == AssetType.ERC20Value){
-                ERC20(swaps[_hashedSecret].tokenAddress).transferFrom(this, swaps[_hashedSecret].participant, swaps[_hashedSecret].value);
+                ERC20(swaps[_hashedSecret].tokenAddress).transfer(swaps[_hashedSecret].participant, swaps[_hashedSecret].value);
             }
 
             if(swaps[_hashedSecret].assetType == AssetType.ERC721Value){
@@ -226,6 +227,7 @@ contract AtomicSwap {
             }                
 
         }
+        
         swaps[_hashedSecret].emptied = true;
         emit Redeemed(block.timestamp);
         swaps[_hashedSecret].secret = _secret;
@@ -242,7 +244,7 @@ contract AtomicSwap {
             }
 
             if(swaps[_hashedSecret].assetType == AssetType.ERC20Value){
-                ERC20(swaps[_hashedSecret].tokenAddress).transferFrom(this, swaps[_hashedSecret].initiator, swaps[_hashedSecret].value);
+                ERC20(swaps[_hashedSecret].tokenAddress).transfer(swaps[_hashedSecret].initiator, swaps[_hashedSecret].value);
             }
 
             if(swaps[_hashedSecret].assetType == AssetType.ERC721Value){
