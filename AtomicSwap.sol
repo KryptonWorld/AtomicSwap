@@ -4,6 +4,8 @@ pragma solidity ^0.4.22;
    
    For two ETH-based chains, this contract allows two persons safely exchange assets without trusting each other. All ERC20 and ERC721Value tokens are supported.
 
+   This contract also allows sending ether to it. The ether will be considered donation to the contract starter.
+
    Author: Lin F. Yang
    Date:   2018/08/18
 
@@ -81,6 +83,12 @@ contract AtomicSwap is ERC721TokenReceiver{
     }
 
     mapping(bytes20 => Swap) public swaps;
+
+    //store the total amount of ether locked in this contract
+    uint256 private lockedValue;
+
+    //allow anyone to look at who is the starter
+    address public contractStarter;
     
     event Refunded(uint _refundTime);
     event Redeemed(uint _redeemTime);
@@ -99,7 +107,7 @@ contract AtomicSwap is ERC721TokenReceiver{
         address _tokenAddress
     );
 
-    constructor() public{}
+
     
     modifier isRefundable(bytes20 _hashedSecret) {
         require(block.timestamp > swaps[_hashedSecret].initTimestamp + swaps[_hashedSecret].refundTime);
@@ -124,6 +132,13 @@ contract AtomicSwap is ERC721TokenReceiver{
         _;
     }
 
+    /*the msg sender will be the contract starter*/
+    constructor() public{
+        contractStarter = msg.sender;
+    }
+
+    /*fallback function, used to accept donations*/
+    function () public payable {}
 
     function __initiate (uint _refundTime,bytes20 _hashedSecret,address _participant) 
         private
@@ -148,6 +163,9 @@ contract AtomicSwap is ERC721TokenReceiver{
 
         swaps[_hashedSecret].value = msg.value;
         swaps[_hashedSecret].assetType = AssetType.Native;
+
+        //add the locked value
+        lockedValue = lockedValue + swaps[_hashedSecret].value;
 
         emit Initiated(
             swaps[_hashedSecret].initTimestamp,
@@ -232,6 +250,9 @@ contract AtomicSwap is ERC721TokenReceiver{
         if(swaps[_hashedSecret].state == State.Initiator){
             if(swaps[_hashedSecret].assetType == AssetType.Native){
                 swaps[_hashedSecret].participant.transfer(swaps[_hashedSecret].value);
+
+                //remove the locked value
+                lockedValue = lockedValue - swaps[_hashedSecret].value;
             }
             
             if(swaps[_hashedSecret].assetType == AssetType.ERC20Value){
@@ -257,6 +278,9 @@ contract AtomicSwap is ERC721TokenReceiver{
         if(swaps[_hashedSecret].state == State.Initiator){
             if(swaps[_hashedSecret].assetType == AssetType.Native){
                 swaps[_hashedSecret].initiator.transfer(swaps[_hashedSecret].value);
+
+                //remove the locked value
+                lockedValue = lockedValue - swaps[_hashedSecret].value;
             }
 
             if(swaps[_hashedSecret].assetType == AssetType.ERC20Value){
@@ -272,6 +296,24 @@ contract AtomicSwap is ERC721TokenReceiver{
     }
 
 
+    /*utility functions*/
+    function getLockedValue() external view returns(uint256){
+        return lockedValue;
+    }
+
+    /*get donation amount*/
+    function getDonationAmount() external view returns(uint256){
+        return address(this).balance - lockedValue;
+    }
+
+
+    /*transfer the donation value to the contractStarter*/
+    function transferDonation() external{
+        require(address(this).balance > lockedValue);
+        contractStarter.transfer(address(this).balance - lockedValue);
+    }    
+
+    /*implement ERC721 receiver */
     function onERC721Received(address _operator, address _from, uint256 _tokenId, bytes _data) external returns(bytes4){
         return bytes4(keccak256("onERC721Received(address,address,uint256,bytes)"));
     }
