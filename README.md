@@ -4,7 +4,7 @@ Suppose Alice want to use X ETH to exchange Y KETH from Bob. They mutually agree
 
 The steps for calling the contracts are as follows:
 
-1. *BOTH:* They first agree on an expiring time ```T1```, sufficiently far away from now. Bob sets ```T2 = Now + (T1-Now)/2```
+1. *BOTH:* They first agree on an expiring time ```T1``` (the amount of time till this amount of money expires), sufficiently far away from now. Bob sets ```T2 = T1/2```
 
 
 
@@ -60,7 +60,7 @@ ERC20/721Token.approve(ETHContract.address, value)
 Then the swap initiator/participator use the initiateERC20/initiateERC721 function to start the swap contract.
 
 ```
-initiateERC20/initiateERC721(uint _refundTime, 
+initiateERC20/initiateERC721(uint _refundTime,      // in seconds. The amount of time till this swap expires
                             bytes20 _hashedSecret, 
                             address _participant, 
                             address _tokenAddress,  // the contract address of the token
