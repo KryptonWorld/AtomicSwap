@@ -69,3 +69,25 @@ initiateERC20/initiateERC721(uint _refundTime,      // in seconds. The amount of
 ```
 
 The rest of the protocol is the same as the native coins.
+
+
+# 中文版例子
+我们现在考虑Alice想用5ETH兑换Bob的200 EOS例子。我们假定Alice和Bob各在ETH和EOS有账号。他们操作的步骤如下。
+
+1. Alice首先生成一个随机的私钥，key。
+
+2. Alice和Bob在线下先约定好一个期限，比如T1 = 30分钟。 这个时间代表Alice的转账将在30分钟后失效。Bob为了保证转账成功，Bob将取一个时间T2=T1/2 = 15分钟。Bob取的时间只要能保证T2和T1-T2足够长即可（例如保证区块链confirm）。
+
+3. Alice用key来生成一个伪随机数，例如 ```R = sha(key|| transaction_nonce)```。这里sha代表SHA Hash。需要注意的是，transaction_nonce必须是每一次都不一样的。这样才能保证生成的R是不一样的。
+
+4. Alice用R计算另一个Hash值， ```H=ripemd160(R)```。这个ripemd160是另一个Hash函数。它几乎在所有的区块链合约上都有实现。
+
+5. Alice用H作为key, 用我们的Swap合约锁定5ETH，指定失效时间为T1 = 30分钟，并将收款人为Bob的以太坊地址。然后将H发送给Bob。 注意，Bob只有拿到了R之后，才能取到5个ETH。所以只要Alice不将R发给Bob，那么Alice的资金则是安全的。
+
+6. Bob得到了H之后，他可以用H在以太访的Swap合约上查询Alice是否正确地将5个ETH锁定了。如果他发现错误，他可以不做任何操作，这即是中止交易。如果Alice的锁定是正确的，那么Bob可以做进一步操作。 Bob用H将200 EOS在EOS上的Swap合约锁定，设定失效时间为T2=15分钟，收款人是Alice。这时Bob可以告知Alice EOS已锁定。
+
+7. Alice在得到Bob的通知之后，她可以用H在EOS的Swap合约上查询，检查Bob是否按要求把EOS锁定了。如果Alice发现任何不对，Alice可以不做任何操作。那么交易自动中止，双方都不会损失。如果Alice确认Bob的锁定，她可以用R在EOS的Swap合约上领取200EOS。Alice可以选告知Bob（也可以不告知，不会对安全性有所影响）。
+
+8. Bob可以等待T2=15分钟，这时如果Alice没有领取EOS，那么Bob可以把200EOS退回。如果Alice已经领取，那么EOS上的Swap合同已经正确地记录了R。Bob可以使用R在ETH上的Swap合约上把自己5个ETH赎回。
+
+8. 等待T1=30分钟后，如果Bob没能在ETH的Swap合约上领取ETH，那么Alice可以把自己的ETH退回。
